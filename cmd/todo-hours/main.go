@@ -14,7 +14,16 @@ const defaultPath = "delivery/README.md"
 
 func main() {
 	var writeFlag bool
-	flag.BoolVar(&writeFlag, "write", false, "Replace or add the total-hours line in place with the computed sum")
+
+	// Manual check for --write before flag parsing to handle "todo-hours file.md --write"
+	for _, arg := range os.Args[1:] {
+		if arg == "--write" || arg == "-write" {
+			writeFlag = true
+			break
+		}
+	}
+
+	flag.BoolVar(&writeFlag, "write", writeFlag, "Replace or add the total-hours line in place with the computed sum")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] [PATH]\n\n", filepath.Base(os.Args[0]))
 		fmt.Fprintf(os.Stderr, "Sum TODO hours from markdown files with section subtotals.\n\n")
@@ -56,9 +65,13 @@ func main() {
 	start, end, found := todohours.FindTotalLine(text)
 
 	// Check for multiple total lines
-	countMatches := strings.Count(text, "Total planned hours from TODO items:")
-	if countMatches > 1 {
-		fmt.Fprintf(os.Stderr, "error: expected exactly one total line matching 'Total planned hours from TODO items: <N>h', found %d\n", countMatches)
+	countMatches := 0
+	if found {
+		countMatches = 1
+	}
+	if strings.Count(text, "Total planned hours from TODO items:") > 1 {
+		fmt.Fprintf(os.Stderr, "error: expected exactly one total line matching 'Total planned hours from TODO items: <N>h', found %d\n",
+			strings.Count(text, "Total planned hours from TODO items:"))
 		os.Exit(1)
 	}
 
