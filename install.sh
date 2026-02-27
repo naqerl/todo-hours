@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO="yourusername/todo-hours"
+REPO="naqerl/todo-hours"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 BINARY_NAME="todo-hours"
 
