@@ -4,15 +4,23 @@ Sum TODO hours from markdown files with section subtotals.
 
 ## Installation
 
-```bash
-uv tool install todo-hours
-```
-
-Or with pip:
+### Using go install
 
 ```bash
-pip install todo-hours
+go install github.com/yourusername/todo-hours/cmd/todo-hours@latest
 ```
+
+### Using curl (Linux/macOS)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yourusername/todo-hours/main/install.sh | bash
+```
+
+This will install the latest binary to `~/.local/bin`.
+
+### Manual Download
+
+Download the latest binary from the [releases page](https://github.com/yourusername/todo-hours/releases).
 
 ## Usage
 
@@ -24,7 +32,7 @@ todo-hours path/to/README.md
 todo-hours path/to/README.md --write
 ```
 
-The script looks for TODO items in markdown files matching the pattern:
+The tool looks for TODO items in markdown files matching the pattern:
 ```markdown
 - [ ] Some task description 5h
 ```
@@ -44,18 +52,17 @@ Total planned hours from TODO items: 42h
 ## Development
 
 ```bash
-# Setup
-uv sync
+# Build
+make build
 
 # Run tests
-uv run pytest
+make test
 
-# Lint
-uv run ruff check .
-uv run ruff format .
+# Run vet (fmt, vet, staticcheck)
+make vet
 
-# Type check
-uv run mypy src/todo_hours
+# Install locally
+make install
 ```
 
 ## License
