@@ -1,5 +1,5 @@
-# Binary
-todo-hours
+# Binary (root level only)
+/todo-hours
 
 # Go
 *.exe
