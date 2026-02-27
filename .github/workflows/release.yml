@@ -3,29 +3,66 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: linux_amd64
+          - goos: linux
+            goarch: arm64
+            suffix: linux_arm64
+          - goos: darwin
+            goarch: amd64
+            suffix: darwin_amd64
+          - goos: darwin
+            goarch: arm64
+            suffix: darwin_arm64
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
 
-      - name: Build package
-        run: uv build
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          output="todo-hours_${{ github.ref_name }}_${{ matrix.suffix }}"
+          make build
+          tar -czf "${output}.tar.gz" todo-hours
 
-      - name: Create GitHub Release
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: todo-hours-${{ matrix.suffix }}
+          path: todo-hours_*.tar.gz
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: todo-hours-*
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: artifacts/**/*.tar.gz
           generate_release_notes: true
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-release@v1
