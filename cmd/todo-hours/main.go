@@ -15,15 +15,10 @@ const defaultPath = "delivery/README.md"
 func main() {
 	var writeFlag bool
 
-	// Manual check for --write before flag parsing to handle "todo-hours file.md --write"
-	for _, arg := range os.Args[1:] {
-		if arg == "--write" || arg == "-write" {
-			writeFlag = true
-			break
-		}
-	}
+	// Define both short (-w) and long (--write) flags
+	flag.BoolVar(&writeFlag, "write", false, "Replace or add the total-hours line in place with the computed sum")
+	flag.BoolVar(&writeFlag, "w", false, "Replace or add the total-hours line in place with the computed sum (shorthand)")
 
-	flag.BoolVar(&writeFlag, "write", writeFlag, "Replace or add the total-hours line in place with the computed sum")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] [PATH]\n\n", filepath.Base(os.Args[0]))
 		fmt.Fprintf(os.Stderr, "Sum TODO hours from markdown files with section subtotals.\n\n")
