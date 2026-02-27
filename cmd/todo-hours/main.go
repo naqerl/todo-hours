@@ -14,7 +14,7 @@ const defaultPath = "delivery/README.md"
 
 func main() {
 	var writeFlag bool
-	flag.BoolVar(&writeFlag, "write", false, "Replace the total-hours line in place with the computed sum")
+	flag.BoolVar(&writeFlag, "write", false, "Replace or add the total-hours line in place with the computed sum")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] [PATH]\n\n", filepath.Base(os.Args[0]))
 		fmt.Fprintf(os.Stderr, "Sum TODO hours from markdown files with section subtotals.\n\n")
@@ -47,30 +47,43 @@ func main() {
 	}
 	text := string(content)
 
-	// Parse the file
-	result, err := todohours.Parse(text)
-	if err != nil {
-		if err.Error() == "total line not found" {
-			fmt.Fprintf(os.Stderr, "error: expected exactly one total line matching 'Total planned hours from TODO items: <N>h', found 0\n")
-			os.Exit(1)
-		}
-		fmt.Fprintf(os.Stderr, "error: parsing file: %v\n", err)
-		os.Exit(1)
-	}
+	// Calculate hours and subtotals
+	count, total := todohours.SumHours(text)
+	subtotals := todohours.SectionSubtotals(text)
+	expectedLine := todohours.ExpectedTotalLine(total)
+
+	// Find total line position
+	start, end, found := todohours.FindTotalLine(text)
 
 	// Check for multiple total lines
-	totalLine := todohours.ExpectedTotalLine(result.Total)
 	countMatches := strings.Count(text, "Total planned hours from TODO items:")
-	if countMatches != 1 {
+	if countMatches > 1 {
 		fmt.Fprintf(os.Stderr, "error: expected exactly one total line matching 'Total planned hours from TODO items: <N>h', found %d\n", countMatches)
 		os.Exit(1)
 	}
 
-	// Validate or update the total line
+	// Handle write flag
 	updated := false
 	if writeFlag {
-		if result.TotalLine != totalLine {
-			newText := text[:result.TotalStart] + totalLine + text[result.TotalEnd:]
+		if found {
+			// Update existing line
+			currentLine := text[start:end]
+			if currentLine != expectedLine {
+				newText := text[:start] + expectedLine + text[end:]
+				err := os.WriteFile(path, []byte(newText), 0o644)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "error: writing file: %v\n", err)
+					os.Exit(1)
+				}
+				updated = true
+			}
+		} else {
+			// Add new line at end of file
+			newText := text
+			if !strings.HasSuffix(text, "\n") {
+				newText += "\n"
+			}
+			newText += "\n" + expectedLine + "\n"
 			err := os.WriteFile(path, []byte(newText), 0o644)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error: writing file: %v\n", err)
@@ -78,16 +91,24 @@ func main() {
 			}
 			updated = true
 		}
-	} else if result.TotalLine != totalLine {
-		fmt.Fprintf(os.Stderr, "error: total line is out of sync; expected '%s' but found '%s'\n", totalLine, result.TotalLine)
+	} else if !found {
+		// Without --write, error if no total line
+		fmt.Fprintf(os.Stderr, "error: expected exactly one total line matching 'Total planned hours from TODO items: <N>h', found 0\n")
 		os.Exit(1)
+	} else {
+		// Validate existing line
+		currentLine := text[start:end]
+		if currentLine != expectedLine {
+			fmt.Fprintf(os.Stderr, "error: total line is out of sync; expected '%s' but found '%s'\n", expectedLine, currentLine)
+			os.Exit(1)
+		}
 	}
 
 	// Output results
-	fmt.Printf("matched_lines=%d\n", result.Count)
-	fmt.Printf("total_hours=%d\n", result.Total)
-	fmt.Printf("total_line_matches=1\n")
-	for section, subtotal := range result.Subtotals {
+	fmt.Printf("matched_lines=%d\n", count)
+	fmt.Printf("total_hours=%d\n", total)
+	fmt.Printf("total_line_matches=%d\n", countMatches)
+	for section, subtotal := range subtotals {
 		fmt.Printf("subtotal[%s]=%d\n", section, subtotal)
 	}
 	if writeFlag {
