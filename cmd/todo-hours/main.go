@@ -15,7 +15,7 @@ const defaultPath = "delivery/README.md"
 func main() {
 	var writeFlag bool
 
-	// Define both short (-w) and long (--write) flags
+	// Define both short (-w) and long (-write) flags
 	flag.BoolVar(&writeFlag, "write", false, "Replace or add the total-hours line in place with the computed sum")
 	flag.BoolVar(&writeFlag, "w", false, "Replace or add the total-hours line in place with the computed sum (shorthand)")
 
@@ -99,16 +99,28 @@ func main() {
 			}
 			updated = true
 		}
-	} else if !found {
-		// Without --write, error if no total line
-		fmt.Fprintf(os.Stderr, "error: expected exactly one total line matching 'Total planned hours from TODO items: <N>h', found 0\n")
-		os.Exit(1)
 	} else {
-		// Validate existing line
-		currentLine := text[start:end]
-		if currentLine != expectedLine {
-			fmt.Fprintf(os.Stderr, "error: total line is out of sync; expected '%s' but found '%s'\n", expectedLine, currentLine)
-			os.Exit(1)
+		// Without --write flag, still try to add/fix the total line
+		if !found {
+			// Add new line at end of file
+			newText := text
+			if !strings.HasSuffix(text, "\n") {
+				newText += "\n"
+			}
+			newText += "\n" + expectedLine + "\n"
+			err := os.WriteFile(path, []byte(newText), 0o644)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error: writing file: %v\n", err)
+				os.Exit(1)
+			}
+			updated = true
+		} else {
+			// Validate existing line
+			currentLine := text[start:end]
+			if currentLine != expectedLine {
+				fmt.Fprintf(os.Stderr, "error: total line is out of sync; expected '%s' but found '%s'\n", expectedLine, currentLine)
+				os.Exit(1)
+			}
 		}
 	}
 
@@ -119,11 +131,9 @@ func main() {
 	for section, subtotal := range subtotals {
 		fmt.Printf("subtotal[%s]=%d\n", section, subtotal)
 	}
-	if writeFlag {
-		if updated {
-			fmt.Println("updated=yes")
-		} else {
-			fmt.Println("updated=no")
-		}
+	if updated {
+		fmt.Println("updated=yes")
+	} else {
+		fmt.Println("updated=no")
 	}
 }
