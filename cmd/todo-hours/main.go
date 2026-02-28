@@ -16,8 +16,8 @@ func main() {
 	var writeFlag bool
 
 	// Define both short (-w) and long (-write) flags
-	flag.BoolVar(&writeFlag, "write", false, "Replace or add the total-hours line in place with the computed sum")
-	flag.BoolVar(&writeFlag, "w", false, "Replace or add the total-hours line in place with the computed sum (shorthand)")
+	flag.BoolVar(&writeFlag, "write", false, "Update an existing but incorrect total line")
+	flag.BoolVar(&writeFlag, "w", false, "Update an existing but incorrect total line (shorthand)")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] [PATH]\n\n", filepath.Base(os.Args[0]))
@@ -27,7 +27,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nThe tool looks for TODO items matching: - [ ] ... <N>h\n")
-		fmt.Fprintf(os.Stderr, "And expects a total line: Total planned hours from TODO items: <N>h\n")
+		fmt.Fprintf(os.Stderr, "And expects a total line: Total planned hours from TODO items: <N>h\n\n")
+		fmt.Fprintf(os.Stderr, "Behavior:\n")
+		fmt.Fprintf(os.Stderr, "  - If total line is missing: it will be auto-created\n")
+		fmt.Fprintf(os.Stderr, "  - If total line is correct: validation passes\n")
+		fmt.Fprintf(os.Stderr, "  - If total line is wrong: use -write to update it\n")
 	}
 	flag.Parse()
 
